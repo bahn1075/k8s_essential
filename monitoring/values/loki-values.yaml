@@ -1,0 +1,149 @@
+# Loki Values
+# 로그 집계 시스템 설정
+
+# Loki 전역 설정
+global:
+  image:
+    registry: docker.io
+  dnsService: "kube-dns"
+
+# Loki 단일 바이너리 모드 (개발/테스트용)
+# 프로덕션에서는 분산 모드 권장
+loki:
+  # 기본 설정
+  image:
+    repository: grafana/loki
+    tag: 2.9.2
+    pullPolicy: IfNotPresent
+
+  # 설정 파일
+  config: |
+    auth_enabled: false
+    
+    server:
+      http_listen_port: 3100
+      
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+          
+    query_scheduler:
+      max_outstanding_requests_per_tenant: 32768
+      
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+            
+    ruler:
+      alertmanager_url: http://prometheus-alertmanager:9093
+      
+    # 로그 보존 기간 설정
+    limits_config:
+      retention_period: 30d
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+      ingestion_rate_mb: 10
+      ingestion_burst_size_mb: 20
+      max_streams_per_user: 10000
+      max_line_size: 256000
+
+  # 리소스 설정
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+
+# 퍼시스턴트 볼륨 설정
+persistence:
+  enabled: true
+  size: 20Gi
+  storageClassName: ""  # 기본 스토리지 클래스 사용
+  accessModes:
+    - ReadWriteOnce
+
+# 서비스 설정
+service:
+  type: ClusterIP
+  port: 3100
+  annotations: {}
+
+# ServiceMonitor (Prometheus 모니터링용)
+serviceMonitor:
+  enabled: true
+  labels: {}
+  interval: "30s"
+
+# 보안 컨텍스트
+securityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+
+# Pod 어노테이션
+podAnnotations: {}
+
+# Pod 보안 컨텍스트
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+
+# Node 셀렉터
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Ingress 설정 (필요시 활성화)
+ingress:
+  enabled: false
+  # annotations:
+  #   kubernetes.io/ingress.class: nginx
+  #   nginx.ingress.kubernetes.io/rewrite-target: /
+  # hosts:
+  #   - host: loki.local
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+  # tls: []
+
+# 네트워크 정책
+networkPolicy:
+  enabled: false
+
+# 프로메테우스 룰 (알람 규칙)
+prometheusRule:
+  enabled: false
+  # groups:
+  #   - name: loki.rules
+  #     rules:
+  #       - alert: LokiDown
+  #         expr: up{job="loki"} == 0
+  #         for: 5m
+  #         labels:
+  #           severity: critical
+  #         annotations:
+  #           summary: "Loki is down"
+  #           description: "Loki has been down for more than 5 minutes."

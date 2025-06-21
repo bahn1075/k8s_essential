@@ -1,0 +1,189 @@
+# k8s-monitoring Full Stack Configuration
+# 전체 모니터링 스택 (Prometheus, Loki, Grafana 포함)
+
+# 클러스터 정보
+cluster:
+  name: "my-k8s-cluster"
+
+# 데이터 전송 목적지
+destinations:
+  # Prometheus로 메트릭 전송
+  - name: "prometheus"
+    type: "prometheus"
+    url: "http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+  
+  # Loki로 로그 전송
+  - name: "loki"
+    type: "loki"
+    url: "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+
+# 전역 설정
+global:
+  scrapeInterval: "15s"  # 더 자주 수집
+  maxCacheSize: 150000
+
+# 모든 Alloy 컬렉터 활성화
+alloy-logs:
+  enabled: true
+  alloy:
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+alloy-metrics:
+  enabled: true
+  alloy:
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+
+alloy-receiver:
+  enabled: true
+  alloy:
+    extraPorts:
+      - name: otlp-grpc
+        port: 4317
+        targetPort: 4317
+        protocol: TCP
+      - name: otlp-http
+        port: 4318
+        targetPort: 4318
+        protocol: TCP
+      - name: zipkin
+        port: 9411
+        targetPort: 9411
+        protocol: TCP
+      - name: jaeger-thrift-http
+        port: 14268
+        targetPort: 14268
+        protocol: TCP
+      - name: jaeger-grpc
+        port: 14250
+        targetPort: 14250
+        protocol: TCP
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+alloy-singleton:
+  enabled: true
+
+# 모든 주요 기능 활성화
+clusterMetrics:
+  enabled: true
+
+clusterEvents:
+  enabled: true
+
+podLogs:
+  enabled: true
+
+nodeLogs:
+  enabled: true
+
+applicationObservability:
+  enabled: true
+  receivers:
+    otlp:
+      grpc:
+        enabled: true
+        port: 4317
+      http:
+        enabled: true
+        port: 4318
+    zipkin:
+      enabled: true
+      port: 9411
+    jaeger:
+      thriftHttp:
+        enabled: true
+        port: 14268
+      grpc:
+        enabled: true
+        port: 14250
+
+annotationAutodiscovery:
+  enabled: true
+
+prometheusOperatorObjects:
+  enabled: true
+
+profiling:
+  enabled: true
+
+autoInstrumentation:
+  enabled: true  # 자동 계측 활성화
+
+# 확장된 서비스 통합
+integrations:
+  # 일반적인 데이터베이스들
+  redis:
+    enabled: false
+    # instances:
+    #   - redis_addr: "redis.default.svc.cluster.local:6379"
+  
+  mysql:
+    enabled: false
+    # instances:
+    #   - data_source_name: "user:password@tcp(mysql.default.svc.cluster.local:3306)/"
+  
+  postgres:
+    enabled: false
+    # instances:
+    #   - data_source_name: "postgresql://user:password@postgres.default.svc.cluster.local:5432/dbname?sslmode=disable"
+  
+  # 메시지 큐
+  rabbitmq:
+    enabled: false
+    # instances:
+    #   - url: "http://rabbitmq.default.svc.cluster.local:15672"
+  
+  # 검색 엔진
+  elasticsearch:
+    enabled: false
+    # instances:
+    #   - url: "http://elasticsearch.default.svc.cluster.local:9200"
+  
+  # 웹 서버
+  nginx:
+    enabled: false
+    # instances:
+    #   - urls: ["http://nginx.default.svc.cluster.local/nginx_status"]
+
+# 자체 보고
+selfReporting:
+  enabled: true
+  scrapeInterval: "30s"
+
+# Alloy Operator
+alloy-operator:
+  deploy: true
+
+# 추가 매니페스트 (예: ServiceMonitor)
+extraObjects:
+  # 커스텀 ServiceMonitor 예제
+  - apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: custom-app-monitor
+      namespace: monitoring
+    spec:
+      selector:
+        matchLabels:
+          app: custom-app
+      endpoints:
+      - port: metrics
+        interval: 30s
+        path: /metrics

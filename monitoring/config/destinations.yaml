@@ -1,0 +1,194 @@
+# 데이터 목적지 설정 템플릿
+# 다양한 목적지 설정 예제들
+
+# Prometheus 관련 목적지들
+prometheus_destinations:
+  # 로컬 Prometheus (kube-prometheus-stack)
+  local_prometheus:
+    name: "prometheus"
+    type: "prometheus"
+    url: "http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+    description: "클러스터 내 Prometheus"
+  
+  # 외부 Prometheus
+  external_prometheus:
+    name: "external-prometheus"
+    type: "prometheus"
+    url: "https://prometheus.example.com/api/v1/write"
+    auth:
+      type: "basic"
+      username: "your-username"
+      password: "your-password"
+    description: "외부 Prometheus 서버"
+  
+  # Grafana Cloud Prometheus
+  grafana_cloud_prometheus:
+    name: "grafana-cloud-prometheus"
+    type: "prometheus"
+    url: "https://prometheus-prod-10-prod-us-central-0.grafana.net/api/prom/push"
+    auth:
+      type: "basic"
+      username: "YOUR_PROMETHEUS_USERNAME"
+      password: "YOUR_PROMETHEUS_API_KEY"
+    description: "Grafana Cloud Prometheus"
+
+# Loki 관련 목적지들
+loki_destinations:
+  # 로컬 Loki
+  local_loki:
+    name: "loki"
+    type: "loki"
+    url: "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+    description: "클러스터 내 Loki"
+  
+  # 외부 Loki
+  external_loki:
+    name: "external-loki"
+    type: "loki"
+    url: "https://loki.example.com/loki/api/v1/push"
+    auth:
+      type: "basic"
+      username: "your-username"
+      password: "your-password"
+    description: "외부 Loki 서버"
+  
+  # Grafana Cloud Loki
+  grafana_cloud_loki:
+    name: "grafana-cloud-loki"
+    type: "loki"
+    url: "https://logs-prod-us-central1.grafana.net/loki/api/v1/push"
+    auth:
+      type: "basic"
+      username: "YOUR_LOKI_USERNAME"
+      password: "YOUR_LOKI_API_KEY"
+    description: "Grafana Cloud Loki"
+
+# OTLP 관련 목적지들 (트레이싱)
+otlp_destinations:
+  # 로컬 Jaeger
+  local_jaeger:
+    name: "jaeger"
+    type: "otlp"
+    url: "http://jaeger-collector.monitoring.svc.cluster.local:4317"
+    description: "클러스터 내 Jaeger"
+  
+  # 로컬 Tempo
+  local_tempo:
+    name: "tempo"
+    type: "otlp"
+    url: "http://tempo.monitoring.svc.cluster.local:4317"
+    description: "클러스터 내 Grafana Tempo"
+  
+  # Grafana Cloud Tempo
+  grafana_cloud_tempo:
+    name: "grafana-cloud-tempo"
+    type: "otlp"
+    url: "https://tempo-prod-04-prod-us-central-0.grafana.net:443"
+    auth:
+      type: "basic"
+      username: "YOUR_TEMPO_USERNAME"
+      password: "YOUR_TEMPO_API_KEY"
+    description: "Grafana Cloud Tempo"
+  
+  # Datadog APM
+  datadog_apm:
+    name: "datadog"
+    type: "otlp"
+    url: "https://trace.agent.datadoghq.com:4317"
+    auth:
+      type: "bearer"
+      token: "YOUR_DATADOG_API_KEY"
+    description: "Datadog APM"
+
+# Pyroscope 관련 목적지들 (프로파일링)
+pyroscope_destinations:
+  # 로컬 Pyroscope
+  local_pyroscope:
+    name: "pyroscope"
+    type: "pyroscope"
+    url: "http://pyroscope.monitoring.svc.cluster.local:4040"
+    description: "클러스터 내 Pyroscope"
+  
+  # Grafana Cloud Pyroscope
+  grafana_cloud_pyroscope:
+    name: "grafana-cloud-pyroscope"
+    type: "pyroscope"
+    url: "https://profiles-prod-001.grafana.net"
+    auth:
+      type: "basic"
+      username: "YOUR_PYROSCOPE_USERNAME"
+      password: "YOUR_PYROSCOPE_API_KEY"
+    description: "Grafana Cloud Pyroscope"
+
+# 사용 예제 조합들
+example_configurations:
+  # 기본 로컬 스택
+  local_stack:
+    destinations:
+      - local_prometheus
+      - local_loki
+    description: "로컬 Prometheus + Loki"
+  
+  # 전체 로컬 스택
+  full_local_stack:
+    destinations:
+      - local_prometheus
+      - local_loki
+      - local_jaeger
+      - local_pyroscope
+    description: "모든 컴포넌트 로컬 설치"
+  
+  # Grafana Cloud 전체
+  grafana_cloud_full:
+    destinations:
+      - grafana_cloud_prometheus
+      - grafana_cloud_loki
+      - grafana_cloud_tempo
+      - grafana_cloud_pyroscope
+    description: "Grafana Cloud 전체 스택"
+  
+  # 하이브리드 (로컬 + 클라우드)
+  hybrid:
+    destinations:
+      - local_prometheus        # 로컬 대시보드용
+      - grafana_cloud_prometheus # 장기 보관용
+      - grafana_cloud_loki      # 중앙 집중식 로그
+    description: "로컬 + 클라우드 하이브리드"
+
+# 인증 방법 예제들
+auth_examples:
+  basic_auth:
+    type: "basic"
+    username: "your-username"
+    password: "your-password"
+  
+  bearer_token:
+    type: "bearer"
+    token: "your-bearer-token"
+  
+  # Kubernetes Secret 참조
+  secret_ref:
+    type: "basic"
+    username:
+      valueFrom:
+        secretKeyRef:
+          name: "monitoring-credentials"
+          key: "username"
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: "monitoring-credentials"
+          key: "password"
+  
+  # AWS IAM 역할 기반
+  aws_sigv4:
+    type: "sigv4"
+    region: "us-west-2"
+    service: "aps"  # Amazon Managed Service for Prometheus
+  
+  # OAuth2
+  oauth2:
+    type: "oauth2"
+    client_id: "your-client-id"
+    client_secret: "your-client-secret"
+    token_url: "https://oauth.example.com/token"

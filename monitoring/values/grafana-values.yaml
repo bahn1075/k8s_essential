@@ -1,0 +1,224 @@
+# Grafana Values
+# 시각화 대시보드 설정
+
+# 이미지 설정
+image:
+  repository: grafana/grafana
+  tag: "10.2.0"
+  pullPolicy: IfNotPresent
+
+# 복제본 수
+replicas: 1
+
+# 서비스 계정
+serviceAccount:
+  create: true
+  name: grafana
+
+# 퍼시스턴트 볼륨
+persistence:
+  enabled: true
+  type: pvc
+  size: 10Gi
+  storageClassName: ""  # 기본 스토리지 클래스 사용
+  accessModes:
+    - ReadWriteOnce
+
+# 관리자 계정 설정
+adminUser: admin
+adminPassword: admin123!
+
+# Grafana 설정
+grafana.ini:
+  server:
+    domain: localhost
+    root_url: "%(protocol)s://%(domain)s:%(http_port)s/"
+    serve_from_sub_path: false
+  
+  security:
+    admin_user: admin
+    admin_password: admin123!
+    allow_sign_up: false
+    disable_gravatar: true
+  
+  users:
+    allow_sign_up: false
+    auto_assign_org: true
+    auto_assign_org_role: Viewer
+  
+  auth.anonymous:
+    enabled: false
+  
+  log:
+    mode: console
+    level: info
+  
+  alerting:
+    enabled: true
+
+# 데이터 소스 자동 설정
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      # Prometheus 데이터 소스
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-kube-prometheus-prometheus:9090
+        access: proxy
+        isDefault: true
+        jsonData:
+          timeInterval: "30s"
+          queryTimeout: "60s"
+          httpMethod: POST
+        
+      # Loki 데이터 소스
+      - name: Loki
+        type: loki
+        url: http://loki:3100
+        access: proxy
+        jsonData:
+          maxLines: 1000
+          timeout: 60
+
+# 대시보드 프로바이더
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+# 사전 설치된 대시보드
+dashboards:
+  default:
+    # Kubernetes 클러스터 개요
+    kubernetes-cluster-overview:
+      gnetId: 7249
+      revision: 1
+      datasource: Prometheus
+    
+    # Kubernetes Pod 모니터링
+    kubernetes-pod-monitoring:
+      gnetId: 6417
+      revision: 1
+      datasource: Prometheus
+    
+    # Node Exporter 대시보드
+    node-exporter:
+      gnetId: 1860
+      revision: 27
+      datasource: Prometheus
+    
+    # Loki 로그 대시보드
+    loki-logs:
+      gnetId: 13639
+      revision: 2
+      datasource: Loki
+
+# 서비스 설정
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+
+# 리소스 설정
+resources:
+  requests:
+    memory: 512Mi
+    cpu: 250m
+  limits:
+    memory: 1Gi
+    cpu: 500m
+
+# 보안 컨텍스트
+securityContext:
+  runAsUser: 472
+  runAsGroup: 472
+  fsGroup: 472
+
+# Pod 보안 컨텍스트
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 472
+  runAsGroup: 472
+  fsGroup: 472
+
+# 환경 변수
+env:
+  GF_SECURITY_ADMIN_PASSWORD: admin123!
+  GF_USERS_ALLOW_SIGN_UP: "false"
+
+# 플러그인 설치
+plugins:
+  - grafana-kubernetes-app
+  - grafana-piechart-panel
+  - grafana-worldmap-panel
+
+# RBAC 설정
+rbac:
+  create: true
+  pspEnabled: false
+  namespaced: false
+
+# ServiceMonitor (Prometheus 모니터링용)
+serviceMonitor:
+  enabled: true
+  labels: {}
+  interval: "30s"
+  path: /metrics
+
+# Ingress 설정 (필요시 활성화)
+ingress:
+  enabled: false
+  # annotations:
+  #   kubernetes.io/ingress.class: nginx
+  #   nginx.ingress.kubernetes.io/rewrite-target: /
+  # hosts:
+  #   - grafana.local
+  # tls: []
+
+# 알림 설정
+notifiers: {}
+
+# SMTP 설정 (필요시)
+smtp:
+  enabled: false
+  # host: smtp.gmail.com:587
+  # user: your-email@gmail.com
+  # password: your-password
+  # from_address: your-email@gmail.com
+  # from_name: Grafana
+
+# LDAP 설정 (필요시)
+ldap:
+  enabled: false
+  # config: |
+  #   [[servers]]
+  #   host = "ldap.example.com"
+  #   port = 389
+
+# Node 셀렉터
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Pod 어노테이션
+podAnnotations: {}
+
+# 자동 스케일링
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
