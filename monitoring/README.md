@@ -15,8 +15,9 @@
 - ✅ **최신 이미지 사용**: 모든 컴포넌트는 태그를 명시하지 않아 최신 버전 사용
 - ✅ **개별 컴포넌트 설치**: Stack 기술 대신 각 컴포넌트를 개별적으로 설치
 - ✅ **Grafana 외부 접근**: `grafana.local` 도메인으로 Ingress 설정
-- ✅ **Loki 스토리지 안정성**: 파일시스템 기반 저장소로 오류 방지
-- ✅ **영구 저장소**: 모든 데이터는 PersistentVolume에 저장
+- ✅ **Loki 스토리지 안정성**: 테스트 스키마 사용으로 설치 안정성 확보
+- ✅ **Tempo 추적 데이터**: 테스트용 trace-generator 애플리케이션 포함
+- ✅ **간소화된 설정**: 권한 문제 해결을 위한 최적화된 구성
 
 ## 파일 구조
 
@@ -24,11 +25,12 @@
 monitoring/
 ├── 00-namespace.yaml           # 네임스페이스 정의
 ├── prometheus-values.yaml      # Prometheus 설정
-├── grafana-values.yaml         # Grafana 설정
+├── grafana-values.yaml         # Grafana 설정 (다양한 기본 대시보드 포함)
 ├── grafana-ingress.yaml        # Grafana 외부 접근 설정
-├── loki-values.yaml           # Loki 설정
+├── loki-values.yaml           # Loki 설정 (간소화된 SingleBinary 모드)
 ├── promtail-values.yaml       # Promtail 설정
-├── tempo-values.yaml          # Tempo 설정
+├── tempo-values.yaml          # Tempo 설정 (간소화된 구성)
+├── trace-generator.yaml       # 추적 데이터 생성용 테스트 앱
 ├── install.sh                 # 설치 스크립트
 ├── uninstall.sh              # 제거 스크립트
 └── README.md                 # 이 파일
@@ -109,7 +111,10 @@ kubectl apply -f grafana-ingress.yaml
 #### hosts 파일 설정
 
 ```bash
-# /etc/hosts 파일에 추가
+# /etc/hosts 파일에 추가 (minikube 사용시)
+echo '192.168.49.2 grafana.local' | sudo tee -a /etc/hosts
+
+# 로컬 환경이나 다른 환경의 경우
 echo '127.0.0.1 grafana.local' | sudo tee -a /etc/hosts
 ```
 
@@ -140,9 +145,31 @@ Grafana에 다음 데이터 소스들이 자동으로 설정됩니다:
 
 설치 시 다음 대시보드들이 자동으로 임포트됩니다:
 
+### Kubernetes 관련
 - **Kubernetes Cluster Monitoring** (ID: 7249)
+- **Kubernetes Cluster Overview** (ID: 8588)
+- **Kubernetes Pods** (ID: 6417)
+- **Kubernetes StatefulSet** (ID: 8684)
+
+### Node & System 관련
 - **Node Exporter Full** (ID: 1860)
+- **Node Exporter Server Metrics** (ID: 405)
+- **System Overview** (ID: 3590)
+- **Linux System Overview** (ID: 12486)
+
+### 컨테이너 & Docker 관련
+- **Docker Containers** (ID: 179)
+- **Container Metrics** (ID: 11600)
+
+### 모니터링 스택 관련
+- **Prometheus Overview** (ID: 3662)
+- **Prometheus Stats** (ID: 2)
 - **Loki Dashboard** (ID: 13639)
+- **Loki Logs** (ID: 12019)
+- **AlertManager Overview** (ID: 9578)
+
+### 네트워크 관련
+- **Network Overview** (ID: 12177)
 
 ## 모니터링 대상
 
@@ -165,13 +192,17 @@ Grafana에 다음 데이터 소스들이 자동으로 설정됩니다:
 
 ## 스토리지 설정
 
-모든 컴포넌트는 영구 저장소를 사용합니다:
-
+### 영구 저장소 사용 컴포넌트
 - **Prometheus**: 10Gi (메트릭 데이터, 30일 보존)
 - **AlertManager**: 2Gi (알람 데이터)
-- **Grafana**: 5Gi (대시보드 및 설정)
-- **Loki**: 10Gi (로그 데이터)
-- **Tempo**: 10Gi (추적 데이터, 24시간 보존)
+
+### 임시 저장소 사용 컴포넌트 (권한 문제 해결)
+- **Grafana**: 임시 저장소 (Pod 재시작 시 대시보드 설정 초기화)
+- **Loki**: 메모리 기반 임시 저장소
+- **Tempo**: 메모리 기반 임시 저장소
+
+> **참고**: 영구 저장소 비활성화는 권한 문제를 회피하기 위한 설정입니다. 
+> 운영 환경에서는 적절한 권한 설정 후 영구 저장소 사용을 권장합니다.
 
 ## 제거 방법
 
@@ -253,3 +284,28 @@ Grafana UI에서 Dashboard > Import를 통해 추가 대시보드를 임포트�
 - [Grafana](https://grafana.com/docs/)
 - [Loki](https://grafana.com/docs/loki/)
 - [Tempo](https://grafana.com/docs/tempo/)
+
+## 추적 데이터 테스트
+
+설치 시 추적 데이터 생성을 위한 테스트 애플리케이션이 함께 배포됩니다.
+
+### 추적 데이터 생성 방법
+
+1. **포트 포워딩 설정**
+```bash
+kubectl port-forward -n monitoring svc/trace-generator 8080:8080 &
+```
+
+2. **테스트 요청 보내기**
+```bash
+# 단일 요청
+curl http://localhost:8080/
+
+# 여러 요청 생성
+for i in {1..10}; do curl -s http://localhost:8080/ > /dev/null; sleep 1; done
+```
+
+3. **Grafana에서 확인**
+   - **Explore** → **Tempo** 데이터소스 선택
+   - **Search** 탭에서 Service Name: `frontend` 검색
+   - 또는 TraceQL 쿼리: `{.service_name="frontend"}`

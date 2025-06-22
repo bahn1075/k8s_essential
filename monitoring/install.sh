@@ -78,6 +78,7 @@ print_status "Installing Loki..."
 helm upgrade --install loki grafana/loki \
     --namespace monitoring \
     --values loki-values.yaml \
+    --set loki.useTestSchema=true \
     --wait --timeout=600s
 
 print_success "Loki installed successfully"
@@ -99,6 +100,12 @@ helm upgrade --install tempo grafana/tempo \
     --wait --timeout=600s
 
 print_success "Tempo installed successfully"
+
+# Install trace generator for testing
+print_status "Installing trace generator for testing..."
+kubectl apply -f trace-generator.yaml
+
+print_success "Trace generator installed"
 
 # Install Grafana
 print_status "Installing Grafana..."
@@ -148,6 +155,10 @@ echo "  • Prometheus: kubectl port-forward -n monitoring svc/prometheus-operat
 echo "  • AlertManager: kubectl port-forward -n monitoring svc/alertmanager-operated 9093:9093"
 echo ""
 echo "📝 Don't forget to add 'grafana.local' to your /etc/hosts file:"
-echo "  echo '127.0.0.1 grafana.local' | sudo tee -a /etc/hosts"
+echo "  echo '192.168.49.2 grafana.local' | sudo tee -a /etc/hosts"
 echo ""
 print_warning "Note: Make sure you have an Ingress Controller (like nginx-ingress) installed for external access"
+echo ""
+print_status "🔄 Generate some trace data for testing:"
+echo "  kubectl port-forward -n monitoring svc/trace-generator 8080:8080 &"
+echo "  curl http://localhost:8080/"

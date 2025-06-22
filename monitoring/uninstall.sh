@@ -39,7 +39,7 @@ fi
 # Uninstall all Helm releases
 print_status "Uninstalling Helm releases..."
 
-releases=("grafana" "tempo" "promtail" "loki" "prometheus")
+releases=("trace-generator" "grafana" "tempo" "promtail" "loki" "prometheus")
 
 for release in "${releases[@]}"; do
     if helm list -n monitoring | grep -q "$release"; then
@@ -51,13 +51,17 @@ for release in "${releases[@]}"; do
     fi
 done
 
+# Delete trace generator deployment
+print_status "Deleting trace generator..."
+kubectl delete -f trace-generator.yaml --ignore-not-found=true
+
 # Delete Grafana Ingress
 print_status "Deleting Grafana Ingress..."
 kubectl delete -f grafana-ingress.yaml --ignore-not-found=true
 
 # Delete persistent volume claims
 print_status "Deleting Persistent Volume Claims..."
-kubectl delete pvc --all -n monitoring
+kubectl delete pvc --all -n monitoring --ignore-not-found=true
 
 # Delete namespace
 print_status "Deleting monitoring namespace..."
