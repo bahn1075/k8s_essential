@@ -1,0 +1,73 @@
+# cert-manager Helm values
+# jetstack/cert-manager 차트를 위한 설정
+
+# Global 설정
+global:
+  logLevel: 2
+  leaderElection:
+    namespace: cert-manager
+
+# 기본 설정
+replicaCount: 1
+
+# 리소스 제한
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# 노드 선택기 (필요시 설정)
+nodeSelector: {}
+
+# Tolerations (필요시 설정)
+tolerations: []
+
+# Affinity (필요시 설정)
+affinity: {}
+
+# Webhook 설정
+webhook:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# CA Injector 설정  
+cainjector:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# 보안 설정
+securityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+
+# 프로메테우스 모니터링 (선택사항)
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: true
+    labels:
+      release: prometheus
