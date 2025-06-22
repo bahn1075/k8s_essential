@@ -1,288 +1,153 @@
 #!/bin/bash
 
-# k8s-monitoring 설치 스크립트
-# Grafana의 k8s-monitoring-helm 차트를 사용하여 Kubernetes 모니터링 환경 구축
+# Kubernetes Full Stack Monitoring Setup Script
+# Components: Prometheus + Grafana + Loki + Promtail + Tempo
 
-set -euo pipefail
+set -e
 
-# 색상 정의
+echo "🚀 Starting Kubernetes Full Stack Monitoring Setup..."
+
+# Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 기본 설정
-NAMESPACE="monitoring"
-RELEASE_NAME="k8s-monitoring"
-CHART_VERSION="3.0.2"
-CONFIG_TYPE="${1:-basic}"
-
-# 스크립트 디렉토리
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# 로그 함수들
-info() {
+# Helper function to print colored output
+print_status() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
 
-success() {
+print_success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
-warning() {
+print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-error() {
+print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 사용법 출력
-usage() {
-    cat << EOF
-Usage: $0 [CONFIG_TYPE]
+# Check if kubectl is available
+if ! command -v kubectl &> /dev/null; then
+    print_error "kubectl is not installed or not in PATH"
+    exit 1
+fi
 
-CONFIG_TYPE:
-  basic       - 기본 k8s-monitoring만 설치 (기본값)
-  standalone  - Prometheus, Loki, Grafana 포함 독립 설치
-  full-stack  - 전체 모니터링 스택 설치
-  grafana-cloud - Grafana Cloud 연동 설치
+# Check if helm is available
+if ! command -v helm &> /dev/null; then
+    print_error "helm is not installed or not in PATH"
+    exit 1
+fi
 
-예제:
-  $0                    # 기본 설치
-  $0 standalone         # 독립 설치
-  $0 full-stack         # 전체 스택 설치
-  $0 grafana-cloud      # Grafana Cloud 연동
+# Add Helm repositories
+print_status "Adding Helm repositories..."
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
 
-EOF
-}
+print_success "Helm repositories added and updated"
 
-# 필수 도구 확인
-check_prerequisites() {
-    info "필수 도구 확인 중..."
-    
-    local missing_tools=()
-    
-    if ! command -v kubectl &> /dev/null; then
-        missing_tools+=("kubectl")
-    fi
-    
-    if ! command -v helm &> /dev/null; then
-        missing_tools+=("helm")
-    fi
-    
-    if [ ${#missing_tools[@]} -ne 0 ]; then
-        error "다음 도구들이 필요합니다: ${missing_tools[*]}"
-        exit 1
-    fi
-    
-    # Kubernetes 클러스터 연결 확인
-    if ! kubectl cluster-info &> /dev/null; then
-        error "Kubernetes 클러스터에 연결할 수 없습니다. kubectl 설정을 확인하세요."
-        exit 1
-    fi
-    
-    success "모든 필수 도구가 준비되었습니다."
-}
+# Create namespace
+print_status "Creating monitoring namespace..."
+kubectl apply -f 00-namespace.yaml
 
-# 네임스페이스 생성
-create_namespace() {
-    info "네임스페이스 생성 중..."
-    
-    if kubectl get namespace "$NAMESPACE" &> /dev/null; then
-        warning "네임스페이스 '$NAMESPACE'가 이미 존재합니다."
-    else
-        kubectl create namespace "$NAMESPACE"
-        success "네임스페이스 '$NAMESPACE' 생성 완료"
-    fi
-}
+# Check if namespace is active
+sleep 5
+if kubectl get namespace monitoring &> /dev/null; then
+    print_success "Namespace 'monitoring' created and ready"
+else
+    print_error "Failed to create namespace"
+    exit 1
+fi
 
-# Helm 리포지토리 설정
-setup_helm_repos() {
-    info "Helm 리포지토리 설정 중..."
-    
-    # Grafana 리포지토리 추가
-    helm repo add grafana https://grafana.github.io/helm-charts
-    
-    # 추가 리포지토리들 (필요시)
-    if [[ "$CONFIG_TYPE" == "standalone" || "$CONFIG_TYPE" == "full-stack" ]]; then
-        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-    fi
-    
-    helm repo update
-    success "Helm 리포지토리 설정 완료"
-}
+# Install Prometheus (without Grafana)
+print_status "Installing Prometheus..."
+helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
+    --namespace monitoring \
+    --values prometheus-values.yaml \
+    --wait --timeout=600s
 
-# Alloy Operator CRD 설치
-install_alloy_operator_crd() {
-    info "Alloy Operator CRD 설치 중..."
-    
-    if kubectl get crd alloys.alloy.grafana.com &> /dev/null; then
-        warning "Alloy CRD가 이미 설치되어 있습니다."
-    else
-        kubectl apply -f https://github.com/grafana/alloy-operator/releases/latest/download/collectors.grafana.com_alloy.yaml
-        success "Alloy Operator CRD 설치 완료"
-    fi
-}
+print_success "Prometheus installed successfully"
 
-# 설정 파일 선택
-get_values_file() {
-    case "$CONFIG_TYPE" in
-        "basic")
-            echo "$SCRIPT_DIR/values/k8s-monitoring-values.yaml"
-            ;;
-        "standalone")
-            echo "$SCRIPT_DIR/examples/standalone/values.yaml"
-            ;;
-        "full-stack")
-            echo "$SCRIPT_DIR/examples/full-stack/values.yaml"
-            ;;
-        "grafana-cloud")
-            echo "$SCRIPT_DIR/examples/with-grafana-cloud/values.yaml"
-            ;;
-        *)
-            error "지원하지 않는 설정 타입: $CONFIG_TYPE"
-            usage
-            exit 1
-            ;;
-    esac
-}
+# Install Loki
+print_status "Installing Loki..."
+helm upgrade --install loki grafana/loki \
+    --namespace monitoring \
+    --values loki-values.yaml \
+    --wait --timeout=600s
 
-# k8s-monitoring 설치
-install_k8s_monitoring() {
-    local values_file
-    values_file=$(get_values_file)
-    
-    if [ ! -f "$values_file" ]; then
-        error "값 파일을 찾을 수 없습니다: $values_file"
-        exit 1
-    fi
-    
-    info "k8s-monitoring 설치 중... (설정: $CONFIG_TYPE)"
-    
-    helm upgrade --install "$RELEASE_NAME" \
-        grafana/k8s-monitoring \
-        --namespace "$NAMESPACE" \
-        --version "$CHART_VERSION" \
-        --values "$values_file" \
-        --wait \
-        --timeout=10m
-    
-    success "k8s-monitoring 설치 완료"
-}
+print_success "Loki installed successfully"
 
-# 추가 컴포넌트 설치 (standalone/full-stack)
-install_additional_components() {
-    case "$CONFIG_TYPE" in
-        "standalone"|"full-stack")
-            install_prometheus
-            install_loki
-            if [[ "$CONFIG_TYPE" == "full-stack" ]]; then
-                install_grafana
-            fi
-            ;;
-    esac
-}
+# Install Promtail
+print_status "Installing Promtail..."
+helm upgrade --install promtail grafana/promtail \
+    --namespace monitoring \
+    --values promtail-values.yaml \
+    --wait --timeout=600s
 
-# Prometheus 설치
-install_prometheus() {
-    info "Prometheus 설치 중..."
-    
-    helm upgrade --install prometheus \
-        prometheus-community/kube-prometheus-stack \
-        --namespace "$NAMESPACE" \
-        --values "$SCRIPT_DIR/values/prometheus-values.yaml" \
-        --wait \
-        --timeout=15m
-    
-    success "Prometheus 설치 완료"
-}
+print_success "Promtail installed successfully"
 
-# Loki 설치
-install_loki() {
-    info "Loki 설치 중..."
-    
-    helm upgrade --install loki \
-        grafana/loki \
-        --namespace "$NAMESPACE" \
-        --values "$SCRIPT_DIR/values/loki-values.yaml" \
-        --wait \
-        --timeout=10m
-    
-    success "Loki 설치 완료"
-}
+# Install Tempo
+print_status "Installing Tempo..."
+helm upgrade --install tempo grafana/tempo \
+    --namespace monitoring \
+    --values tempo-values.yaml \
+    --wait --timeout=600s
 
-# Grafana 설치
-install_grafana() {
-    info "Grafana 설치 중..."
-    
-    helm upgrade --install grafana \
-        grafana/grafana \
-        --namespace "$NAMESPACE" \
-        --values "$SCRIPT_DIR/values/grafana-values.yaml" \
-        --wait \
-        --timeout=10m
-    
-    success "Grafana 설치 완료"
-}
+print_success "Tempo installed successfully"
 
-# 설치 상태 확인
-check_installation() {
-    info "설치 상태 확인 중..."
-    
-    # Pod 상태 확인
-    echo ""
-    info "Pod 상태:"
-    kubectl get pods -n "$NAMESPACE" -o wide
-    
-    # 서비스 상태 확인
-    echo ""
-    info "서비스 상태:"
-    kubectl get svc -n "$NAMESPACE"
-    
-    # Grafana 접속 정보 (standalone/full-stack인 경우)
-    if [[ "$CONFIG_TYPE" == "standalone" || "$CONFIG_TYPE" == "full-stack" ]]; then
-        echo ""
-        info "Grafana 접속 정보:"
-        echo "URL: http://$(kubectl get svc grafana -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):3000"
-        echo "Username: admin"
-        echo "Password: $(kubectl get secret grafana -n $NAMESPACE -o jsonpath='{.data.admin-password}' | base64 -d)"
-    fi
-}
+# Install Grafana
+print_status "Installing Grafana..."
+helm upgrade --install grafana grafana/grafana \
+    --namespace monitoring \
+    --values grafana-values.yaml \
+    --wait --timeout=600s
 
-# 메인 실행 함수
-main() {
-    # 헬프 옵션 처리
-    if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-        usage
-        exit 0
-    fi
-    
-    info "Kubernetes 모니터링 환경 설치를 시작합니다..."
-    info "설정 타입: $CONFIG_TYPE"
-    
-    check_prerequisites
-    create_namespace
-    setup_helm_repos
-    install_alloy_operator_crd
-    install_k8s_monitoring
-    install_additional_components
-    
-    success "설치가 완료되었습니다!"
-    
-    check_installation
-    
-    echo ""
-    info "다음 명령어로 모니터링 상태를 확인할 수 있습니다:"
-    echo "  kubectl get pods -n $NAMESPACE"
-    echo "  kubectl logs -n $NAMESPACE -l app.kubernetes.io/name=alloy"
-    
-    if [[ "$CONFIG_TYPE" == "standalone" || "$CONFIG_TYPE" == "full-stack" ]]; then
-        echo ""
-        info "Grafana에 접속하여 대시보드를 확인하세요."
-    fi
-}
+print_success "Grafana installed successfully"
 
-# 스크립트 실행
-main "$@"
+# Apply Grafana Ingress
+print_status "Applying Grafana Ingress..."
+kubectl apply -f grafana-ingress.yaml
+
+print_success "Grafana Ingress created"
+
+# Wait for all deployments to be ready
+print_status "Waiting for all deployments to be ready..."
+kubectl wait --for=condition=Available deployment --all -n monitoring --timeout=600s
+
+print_success "All deployments are ready!"
+
+# Get service information
+echo ""
+print_status "=== Service Information ==="
+kubectl get services -n monitoring
+
+echo ""
+print_status "=== Pod Status ==="
+kubectl get pods -n monitoring
+
+echo ""
+print_status "=== Ingress Information ==="
+kubectl get ingress -n monitoring
+
+echo ""
+print_success "🎉 Full Stack Monitoring Setup Complete!"
+echo ""
+echo "📊 Access Information:"
+echo "  • Grafana UI: http://grafana.local"
+echo "  • Admin Username: admin"
+echo "  • Admin Password: admin123"
+echo ""
+echo "🔧 Port Forward Commands (if ingress is not working):"
+echo "  • Grafana: kubectl port-forward -n monitoring svc/grafana 3000:80"
+echo "  • Prometheus: kubectl port-forward -n monitoring svc/prometheus-operated 9090:9090"
+echo "  • AlertManager: kubectl port-forward -n monitoring svc/alertmanager-operated 9093:9093"
+echo ""
+echo "📝 Don't forget to add 'grafana.local' to your /etc/hosts file:"
+echo "  echo '127.0.0.1 grafana.local' | sudo tee -a /etc/hosts"
+echo ""
+print_warning "Note: Make sure you have an Ingress Controller (like nginx-ingress) installed for external access"

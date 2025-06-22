@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trace-generator
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trace-generator
+  template:
+    metadata:
+      labels:
+        app: trace-generator
+    spec:
+      containers:
+      - name: trace-generator
+        image: jaegertracing/example-hotrod:1.22
+        ports:
+        - containerPort: 8080
+        env:
+        - name: JAEGER_AGENT_HOST
+          value: "tempo.monitoring.svc.cluster.local"
+        - name: JAEGER_AGENT_PORT
+          value: "14268"
+        - name: JAEGER_ENDPOINT
+          value: "http://tempo.monitoring.svc.cluster.local:14268/api/traces"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trace-generator
+  namespace: monitoring
+spec:
+  selector:
+    app: trace-generator
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP

@@ -1,0 +1,72 @@
+# Tempo 설정
+image:
+  # 최신 이미지 사용
+  repository: grafana/tempo
+
+# Tempo 설정
+tempo:
+  repository: local
+  retention: 24h
+  
+  receivers:
+    jaeger:
+      protocols:
+        thrift_http:
+          endpoint: 0.0.0.0:14268
+        grpc:
+          endpoint: 0.0.0.0:14250
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+    zipkin:
+      endpoint: 0.0.0.0:9411
+
+# 영구 저장소 설정
+persistence:
+  enabled: true
+  storageClassName: standard
+  size: 10Gi
+
+# 서비스 설정
+service:
+  type: ClusterIP
+  port: 3200
+
+# 리소스 제한
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# 추가 서비스 포트 설정
+serviceMonitor:
+  enabled: true
+
+# 추가 포트 노출
+extraPorts:
+  - name: jaeger-thrift-http
+    port: 14268
+    protocol: TCP
+    targetPort: 14268
+  - name: jaeger-grpc
+    port: 14250
+    protocol: TCP
+    targetPort: 14250
+  - name: otlp-grpc
+    port: 4317
+    protocol: TCP
+    targetPort: 4317
+  - name: otlp-http
+    port: 4318
+    protocol: TCP
+    targetPort: 4318
+  - name: zipkin
+    port: 9411
+    protocol: TCP
+    targetPort: 9411

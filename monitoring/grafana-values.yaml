@@ -1,0 +1,145 @@
+# Grafana 설정
+image:
+  # 최신 이미지 사용
+  repository: grafana/grafana
+
+# Admin 계정 설정
+adminUser: admin
+adminPassword: admin123
+
+# 데이터 소스 자동 구성
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      # Prometheus 데이터 소스
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-operated.monitoring.svc.cluster.local:9090
+        access: proxy
+        isDefault: true
+      # Loki 데이터 소스
+      - name: Loki
+        type: loki
+        url: http://loki.monitoring.svc.cluster.local:3100
+        access: proxy
+      # Tempo 데이터 소스
+      - name: Tempo
+        type: tempo
+        url: http://tempo.monitoring.svc.cluster.local:3200
+        access: proxy
+
+# 대시보드 자동 임포트
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+# 기본 대시보드 설정
+dashboards:
+  default:
+    # Kubernetes 관련 대시보드들
+    kubernetes-cluster-monitoring:
+      gnetId: 7249
+      revision: 1
+      datasource: Prometheus
+    kubernetes-cluster-overview:
+      gnetId: 8588
+      revision: 1
+      datasource: Prometheus
+    kubernetes-pods:
+      gnetId: 6417
+      revision: 1
+      datasource: Prometheus
+    kubernetes-deployment:
+      gnetId: 8588
+      revision: 1
+      datasource: Prometheus
+    kubernetes-statefulset:
+      gnetId: 8684
+      revision: 1
+      datasource: Prometheus
+    
+    # Node Exporter 관련
+    node-exporter-full:
+      gnetId: 1860
+      revision: 37
+      datasource: Prometheus
+    node-exporter-server-metrics:
+      gnetId: 405
+      revision: 8
+      datasource: Prometheus
+    
+    # Prometheus 관련
+    prometheus-overview:
+      gnetId: 3662
+      revision: 2
+      datasource: Prometheus
+    prometheus-stats:
+      gnetId: 2
+      revision: 2
+      datasource: Prometheus
+    
+    # Loki 관련
+    loki-dashboard:
+      gnetId: 13639
+      revision: 2
+      datasource: Loki
+    loki-logs:
+      gnetId: 12019
+      revision: 2
+      datasource: Loki
+    
+    # Docker & Container 관련
+    docker-containers:
+      gnetId: 179
+      revision: 7
+      datasource: Prometheus
+    container-metrics:
+      gnetId: 11600
+      revision: 1
+      datasource: Prometheus
+    
+    # 시스템 모니터링
+    system-overview:
+      gnetId: 3590
+      revision: 3
+      datasource: Prometheus
+    linux-system-overview:
+      gnetId: 12486
+      revision: 1
+      datasource: Prometheus
+    
+    # AlertManager
+    alertmanager-overview:
+      gnetId: 9578
+      revision: 4
+      datasource: Prometheus
+    
+    # 네트워크 모니터링
+    network-overview:
+      gnetId: 12177
+      revision: 1
+      datasource: Prometheus
+
+# 서비스 설정
+service:
+  type: ClusterIP
+  port: 80
+
+# 영구 저장소 비활성화 (권한 문제 회피)
+persistence:
+  enabled: false
+
+# 플러그인 설치
+plugins:
+  - grafana-piechart-panel
+  - grafana-worldmap-panel

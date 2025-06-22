@@ -1,0 +1,54 @@
+# Prometheus values
+nameOverride: "prometheus"
+fullnameOverride: "prometheus"
+
+prometheus:
+  prometheusSpec:
+    # 이미지 설정을 기본값으로 사용 (올바른 경로로 자동 설정됨)
+    retention: 30d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    additionalScrapeConfigs:
+      # Loki에서 메트릭 수집
+      - job_name: 'loki'
+        static_configs:
+          - targets: ['loki.monitoring.svc.cluster.local:3100']
+      # Tempo에서 메트릭 수집
+      - job_name: 'tempo'
+        static_configs:
+          - targets: ['tempo.monitoring.svc.cluster.local:3200']
+
+# AlertManager 설정
+alertmanager:
+  alertmanagerSpec:
+    # 이미지 설정을 기본값으로 사용
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+# Grafana는 별도 설치하므로 비활성화
+grafana:
+  enabled: false
+
+# Node Exporter 활성화
+nodeExporter:
+  enabled: true
+
+# kube-state-metrics 활성화
+kubeStateMetrics:
+  enabled: true
+
+# 서비스 모니터 활성화
+serviceMonitor:
+  enabled: true
