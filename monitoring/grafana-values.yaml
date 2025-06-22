@@ -46,88 +46,10 @@ dashboardProviders:
 # 기본 대시보드 설정
 dashboards:
   default:
-    # Kubernetes 관련 대시보드들
-    kubernetes-cluster-monitoring:
-      gnetId: 7249
-      revision: 1
-      datasource: Prometheus
-    kubernetes-cluster-overview:
-      gnetId: 8588
-      revision: 1
-      datasource: Prometheus
-    kubernetes-pods:
-      gnetId: 6417
-      revision: 1
-      datasource: Prometheus
-    kubernetes-deployment:
-      gnetId: 8588
-      revision: 1
-      datasource: Prometheus
-    kubernetes-statefulset:
-      gnetId: 8684
-      revision: 1
-      datasource: Prometheus
-    
-    # Node Exporter 관련
+    # Node Exporter Full 대시보드만 유지
     node-exporter-full:
       gnetId: 1860
       revision: 37
-      datasource: Prometheus
-    node-exporter-server-metrics:
-      gnetId: 405
-      revision: 8
-      datasource: Prometheus
-    
-    # Prometheus 관련
-    prometheus-overview:
-      gnetId: 3662
-      revision: 2
-      datasource: Prometheus
-    prometheus-stats:
-      gnetId: 2
-      revision: 2
-      datasource: Prometheus
-    
-    # Loki 관련
-    loki-dashboard:
-      gnetId: 13639
-      revision: 2
-      datasource: Loki
-    loki-logs:
-      gnetId: 12019
-      revision: 2
-      datasource: Loki
-    
-    # Docker & Container 관련
-    docker-containers:
-      gnetId: 179
-      revision: 7
-      datasource: Prometheus
-    container-metrics:
-      gnetId: 11600
-      revision: 1
-      datasource: Prometheus
-    
-    # 시스템 모니터링
-    system-overview:
-      gnetId: 3590
-      revision: 3
-      datasource: Prometheus
-    linux-system-overview:
-      gnetId: 12486
-      revision: 1
-      datasource: Prometheus
-    
-    # AlertManager
-    alertmanager-overview:
-      gnetId: 9578
-      revision: 4
-      datasource: Prometheus
-    
-    # 네트워크 모니터링
-    network-overview:
-      gnetId: 12177
-      revision: 1
       datasource: Prometheus
 
 # 서비스 설정
