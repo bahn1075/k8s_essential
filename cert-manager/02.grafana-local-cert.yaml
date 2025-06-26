@@ -1,0 +1,11 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-local-cert
+  namespace: cert-manager
+spec:
+  secretName: grafana-local-tls
+  dnsNames:
+    - grafana.local
+  issuerRef:
+    name: mkcert-issuer

@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gitlab-local-cert
+  namespace: cert-manager
+spec:
+  secretName: gitlab-local-tls
+  dnsNames:
+    - gitlab.local
+  issuerRef:
+    name: mkcert-issuer
+    kind: Issuer
