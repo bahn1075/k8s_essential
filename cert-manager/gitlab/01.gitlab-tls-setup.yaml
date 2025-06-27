@@ -1,0 +1,28 @@
+---
+# 02. mkcert-issuer
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: mkcert-issuer
+  namespace: gitlab
+spec:
+  ca:
+    secretName: mkcert-root-ca
+---
+# 03. gitlab-local-cert
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gitlab-local-cert
+  namespace: gitlab
+spec:
+  secretName: gitlab-local-tls
+  duration: 168h
+  renewBefore: 24h
+  commonName: gitlab.local
+  dnsNames:
+    - gitlab.local
+  issuerRef:
+    name: mkcert-issuer
+    kind: Issuer
+

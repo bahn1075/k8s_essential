@@ -17,6 +17,8 @@ defaultVolumes:
   - name: varlibdockercontainers
     hostPath:
       path: /var/lib/docker/containers
+  - name: run-promtail
+    emptyDir: {}
 
 defaultVolumeMounts:
   - name: varlog
@@ -25,6 +27,9 @@ defaultVolumeMounts:
   - name: varlibdockercontainers
     mountPath: /var/lib/docker/containers
     readOnly: true
+  - name: run-promtail
+    mountPath: /run/promtail
+    # positions 파일 저장용
 
 # DaemonSet으로 배포 (모든 노드에서 로그 수집)
 daemonset:

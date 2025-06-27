@@ -1,0 +1,64 @@
+# 01. mkcert-root-ca Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mkcert-root-ca
+  namespace: monitoring
+type: kubernetes.io/tls
+data:
+  tls.crt: <base64-encoded rootCA.pem>
+  tls.key: <base64-encoded rootCA-key.pem>
+---
+# 02. mkcert-issuer
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: mkcert-issuer
+  namespace: monitoring
+spec:
+  ca:
+    secretName: mkcert-root-ca
+---
+# 03. grafana-local-cert
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-local-cert
+  namespace: monitoring
+spec:
+  secretName: grafana-local-tls
+  duration: 168h
+  renewBefore: 24h
+  commonName: grafana.local
+  dnsNames:
+    - grafana.local
+  issuerRef:
+    name: mkcert-issuer
+    kind: Issuer
+---
+# 04. grafana-ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - grafana.local
+    secretName: grafana-local-tls
+  rules:
+  - host: grafana.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 80

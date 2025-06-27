@@ -2,11 +2,18 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: gitlab-local-cert
-  namespace: cert-manager
+  namespace: gitlab
 spec:
   secretName: gitlab-local-tls
+  duration: 168h
+  renewBefore: 24h
+  commonName: gitlab.gitlab.local
   dnsNames:
-    - gitlab.local
+    - gitlab.gitlab.local
+    - registry.gitlab.local
+    - minio.gitlab.local
+    - charts.gitlab.local
+    - kas.gitlab.local
   issuerRef:
     name: mkcert-issuer
     kind: Issuer

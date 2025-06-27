@@ -1,0 +1,55 @@
+# values-minikube.yaml
+# 목적: Minikube + 기존 ingress-nginx + 외부 cert-manager 환경에서 GitLab 실행
+
+global:
+  ingress:
+    configureCertmanager: false        # ❗ GitLab 내부 cert-manager 연동 비활성화
+    class: nginx                       # ❗ 클러스터에 있는 ingress-nginx 사용
+    tls:
+      enabled: true
+      secretName: gitlab-local-tls     # ❗ 미리 cert-manager로 발급된 Secret 사용
+  hosts:
+    domain: gitlab.local               # ❗ 접속 도메인
+    externalIP: 192.168.49.2           # ❗ Minikube IP
+
+  rails:
+    bootsnap:
+      enabled: false
+
+  shell:
+    port: 32022                        # SSH 클론 포트용
+
+# ❗ GitLab이 자체 cert-manager를 설치하지 않도록 설정
+installCertmanager: false
+
+# ❗ GitLab이 자체 Ingress Controller를 설치하지 않도록 설정
+nginx-ingress:
+  enabled: false
+
+# ❗ 클러스터 자원 최소화 (기존 설정 유지)
+prometheus:
+  install: false
+
+gitlab-runner:
+  install: false
+
+gitlab:
+  webservice:
+    minReplicas: 1
+    maxReplicas: 1
+  sidekiq:
+    minReplicas: 1
+    maxReplicas: 1
+  gitlab-shell:
+    minReplicas: 1
+    maxReplicas: 1
+    service:
+      type: NodePort
+      nodePort: 32022
+  kas:
+    minReplicas: 1
+    maxReplicas: 1
+registry:
+  hpa:
+    minReplicas: 1
+    maxReplicas: 1

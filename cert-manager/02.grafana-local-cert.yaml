@@ -1,11 +1,16 @@
+
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: grafana-local-cert
-  namespace: cert-manager
+  namespace: monitoring
 spec:
   secretName: grafana-local-tls
+  duration: 168h
+  renewBefore: 24h
+  commonName: grafana.local
   dnsNames:
     - grafana.local
   issuerRef:
     name: mkcert-issuer
+    kind: Issuer

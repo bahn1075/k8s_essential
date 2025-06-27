@@ -1,0 +1,8 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: mkcert-issuer
+  namespace: monitoring
+spec:
+  ca:
+    secretName: mkcert-root-ca
