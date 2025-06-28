@@ -3,6 +3,7 @@
 
 global:
   ingress:
+    enabled: true                     # Ingress 서비스 활성화
     configureCertmanager: false        # ❗ GitLab 내부 cert-manager 연동 비활성화
     class: nginx                       # ❗ 클러스터에 있는 ingress-nginx 사용
     tls:
