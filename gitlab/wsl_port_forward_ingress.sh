@@ -10,8 +10,8 @@ if ! command -v socat &> /dev/null; then
 fi
 
 # 80 포트 포워딩
-nohup socat TCP-LISTEN:80,fork TCP:192.168.49.2:80 &
+nohup sudo socat TCP-LISTEN:80,fork TCP:192.168.49.2:80 > /tmp/nohup.80.out 2>&1 &
 # 443 포트 포워딩
-nohup socat TCP-LISTEN:443,fork TCP:192.168.49.2:443 &
+nohup sudo socat TCP-LISTEN:443,fork TCP:192.168.49.2:443 > /tmp/nohup.443.out 2>&1 &
 
 echo "포트포워딩이 시작되었습니다. Windows 브라우저에서 https://gitlab.gitlab.local 로 접속하세요."

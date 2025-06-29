@@ -1,0 +1,34 @@
+# 기본 OS/에디터 파일
+.DS_Store
+*.swp
+*.swo
+*.bak
+
+# nohup 로그 및 socat 관련 임시 파일
+nohup.out
+
+# 인증서/키/시크릿 파일
+*.crt
+*.key
+*.pem
+*.csr
+*.der
+*.p12
+*.pfx
+
+# mkcert/cert-manager 임시 파일
+rootCA.crt
+rootCA.pem
+rootCA-key.pem
+
+# 기타 보안/임시 파일
+*.secret
+*.enc
+*.tmp
+
+# VSCode/IDE 관련
+.vscode/
+.idea/
+
+# 기타
+*.log
