@@ -34,10 +34,13 @@ helm upgrade --install $RELEASE_NAME jenkinsci/jenkins \
   --set controller.ingress.ingressClassName=nginx \
   --set 'controller.ingress.tls[0].hosts[0]'=$DOMAIN \
   --set 'controller.ingress.tls[0].secretName'=jenkins-tls \
-  --set controller.admin.username=admin \
-  --set controller.admin.password=admin
+  --set controller.serviceAccount.create=true \
+  --set controller.serviceAccount.name=jenkins \
+  --set rbac.create=true \
+  
 
 # Ingress 정보 출력
 echo "\n[INFO] Jenkins Ingress 생성 완료!"
 echo "접속: https://$DOMAIN (hosts 파일에 $DOMAIN 등록 필요)"
-echo "기본 관리자 계정: admin / admin"
+echo "기본 관리자 계정: admin / (최초 비밀번호는 아래 명령으로 확인)"
+echo "kubectl exec -n jenkins -it $(kubectl get pods -n jenkins -l app.kubernetes.io/component=jenkins-controller -o jsonpath='{.items[0].metadata.name}') -- cat /run/secrets/additional/chart-admin-password"
